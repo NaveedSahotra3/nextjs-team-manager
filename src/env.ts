@@ -37,24 +37,24 @@ export const env = createEnv({
    */
   runtimeEnv: {
     // Server
-    DATABASE_URL: process.env.DATABASE_URL,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: process.env.SMTP_PORT,
-    SMTP_USER: process.env.SMTP_USER,
-    SMTP_PASSWORD: process.env.SMTP_PASSWORD,
-    SMTP_FROM: process.env.SMTP_FROM,
-    NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env["DATABASE_URL"],
+    NEXTAUTH_SECRET: process.env["NEXTAUTH_SECRET"],
+    NEXTAUTH_URL: process.env["NEXTAUTH_URL"],
+    SMTP_HOST: process.env["SMTP_HOST"],
+    SMTP_PORT: process.env["SMTP_PORT"],
+    SMTP_USER: process.env["SMTP_USER"],
+    SMTP_PASSWORD: process.env["SMTP_PASSWORD"],
+    SMTP_FROM: process.env["SMTP_FROM"],
+    NODE_ENV: process.env["NODE_ENV"],
 
     // Client
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: process.env["NEXT_PUBLIC_APP_URL"],
   },
 
   /**
    * Skip validation in build mode
    */
-  skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
+  skipValidation: process.env["SKIP_ENV_VALIDATION"] === "true",
 
   /**
    * Makes it so empty strings are treated as undefined
