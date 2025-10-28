@@ -15,11 +15,36 @@ const transporter: Transporter = nodemailer.createTransport({
   },
 });
 
+interface SendEmailParams {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
 interface SendInvitationEmailParams {
   to: string;
   teamName: string;
   inviterName: string;
   invitationUrl: string;
+}
+
+/**
+ * Send a generic email
+ * @param params - Email parameters
+ */
+export async function sendEmail(params: SendEmailParams): Promise<void> {
+  const { to, subject, html, text } = params;
+
+  const mailOptions = {
+    from: env.SMTP_FROM,
+    to,
+    subject,
+    html,
+    text: text || "",
+  };
+
+  await transporter.sendMail(mailOptions);
 }
 
 /**
