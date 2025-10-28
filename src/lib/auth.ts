@@ -1,6 +1,4 @@
 // eslint-disable-next-line import/no-named-as-default-member
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-// eslint-disable-next-line import/no-named-as-default-member
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { type NextAuthOptions } from "next-auth";
@@ -11,14 +9,12 @@ import { users } from "@/db/schema";
 import { env } from "@/env";
 
 export const authOptions: NextAuthOptions = {
-  adapter: DrizzleAdapter(db),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
     error: "/auth/error",
   },
   providers: [
