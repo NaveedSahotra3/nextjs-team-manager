@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Users, Calendar } from "lucide-react";
+import { Plus, Users, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -72,6 +72,15 @@ export default function TeamsPage() {
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
+        {/* Back to Dashboard */}
+        <Link
+          href="/dashboard"
+          className="mb-6 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+
         {/* Header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
