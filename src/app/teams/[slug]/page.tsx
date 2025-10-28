@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Mail, Users, UserPlus } from "lucide-react";
+import { ArrowLeft, Mail, Users, UserPlus, Settings } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 
 export const dynamic = "force-dynamic";
 
+import { InvitationManagement } from "@/components/team/InvitationManagement";
+import { MemberManagement } from "@/components/team/MemberManagement";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -189,10 +191,20 @@ export default function TeamDetailPage() {
         </Link>
 
         {/* Team Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
-          <p className="mt-1 text-gray-600">/{team.slug}</p>
-          {team.description && <p className="mt-2 text-gray-700">{team.description}</p>}
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
+            <p className="mt-1 text-gray-600">/{team.slug}</p>
+            {team.description && <p className="mt-2 text-gray-700">{team.description}</p>}
+          </div>
+          {session?.user?.id === team.ownerId && (
+            <Link href={`/teams/${slug}/settings`}>
+              <Button variant="outline" size="sm">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Success Message */}
@@ -299,17 +311,31 @@ export default function TeamDetailPage() {
                           <p className="text-sm text-gray-600">{member.user.email}</p>
                         </div>
                       </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
-                          member.role === "owner"
-                            ? "bg-purple-100 text-purple-800"
-                            : member.role === "admin"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {member.role}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            member.role === "owner"
+                              ? "bg-purple-100 text-purple-800"
+                              : member.role === "admin"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {member.role}
+                        </span>
+                        {session?.user?.id && (
+                          <MemberManagement
+                            member={member}
+                            currentUserRole={
+                              team.members.find((m) => m.user.id === session.user.id)?.role ||
+                              "member"
+                            }
+                            currentUserId={session.user.id}
+                            teamSlug={slug}
+                            onMemberUpdated={fetchTeamData}
+                          />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -335,14 +361,25 @@ export default function TeamDetailPage() {
                     {invitations
                       .filter((inv) => inv.status === "pending")
                       .map((invitation) => (
-                        <div key={invitation.id} className="rounded-lg border p-3">
-                          <p className="font-medium text-gray-900">{invitation.email}</p>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span className="text-xs text-gray-600">{invitation.role}</span>
-                            <span className="text-xs text-gray-500">
-                              Expires {new Date(invitation.expiresAt).toLocaleDateString()}
-                            </span>
+                        <div
+                          key={invitation.id}
+                          className="flex items-center justify-between rounded-lg border p-3"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{invitation.email}</p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-xs text-gray-600">{invitation.role}</span>
+                              <span className="text-xs text-gray-400">•</span>
+                              <span className="text-xs text-gray-500">
+                                Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                              </span>
+                            </div>
                           </div>
+                          <InvitationManagement
+                            invitation={invitation}
+                            teamSlug={slug}
+                            onInvitationRevoked={fetchTeamData}
+                          />
                         </div>
                       ))}
                   </div>
