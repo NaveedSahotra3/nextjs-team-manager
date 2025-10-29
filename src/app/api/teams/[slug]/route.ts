@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, isNull, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
@@ -30,22 +30,22 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check if user has access to this team
+    // Check if user has access to this team (owner or active member)
     const membership = await db.query.teamMembers.findFirst({
-      where: eq(teamMembers.teamId, team.id),
-      columns: {
-        userId: true,
-      },
+      where: and(
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, session.user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
-    const hasAccess =
-      team.ownerId === session.user.id || (membership && membership.userId === session.user.id);
+    const hasAccess = team.ownerId === session.user.id || membership !== undefined;
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get all team members with user details
+    // Get all active team members with user details (exclude removed members)
     const members = await db
       .select({
         id: teamMembers.id,
@@ -60,7 +60,7 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
       })
       .from(teamMembers)
       .innerJoin(users, eq(teamMembers.userId, users.id))
-      .where(eq(teamMembers.teamId, team.id));
+      .where(and(eq(teamMembers.teamId, team.id), isNull(teamMembers.removedAt)));
 
     return NextResponse.json(
       {

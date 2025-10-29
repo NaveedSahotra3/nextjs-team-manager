@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
@@ -19,7 +19,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get teams where user is a member (includes owner role)
+    // Get teams where user is an active member (excludes removed members)
     const userTeams = await db
       .select({
         id: teams.id,
@@ -33,7 +33,7 @@ export async function GET() {
       })
       .from(teamMembers)
       .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-      .where(eq(teamMembers.userId, session.user.id));
+      .where(and(eq(teamMembers.userId, session.user.id), isNull(teamMembers.removedAt)));
 
     return NextResponse.json({ teams: userTeams }, { status: 200 });
   } catch (error) {

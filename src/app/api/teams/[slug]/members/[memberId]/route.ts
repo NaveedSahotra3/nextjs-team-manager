@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
@@ -38,9 +38,13 @@ export async function PATCH(
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check if current user is owner or admin
+    // Check if current user is owner or admin (exclude removed members)
     const currentUserMembership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, session.user.id)),
+      where: and(
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, session.user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
     if (
@@ -142,9 +146,13 @@ export async function DELETE(
     }
 
     // Check permissions: owners and admins can remove members
-    // Members can only remove themselves
+    // Members can only remove themselves (exclude removed members)
     const currentUserMembership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, session.user.id)),
+      where: and(
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, session.user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
     const isOwnerOrAdmin =
@@ -160,8 +168,14 @@ export async function DELETE(
       );
     }
 
-    // Remove member
-    await db.delete(teamMembers).where(eq(teamMembers.id, memberId));
+    // Soft delete: Mark member as removed instead of hard delete
+    await db
+      .update(teamMembers)
+      .set({
+        removedAt: new Date(),
+        removedBy: session.user.id,
+      })
+      .where(eq(teamMembers.id, memberId));
 
     return NextResponse.json(
       {

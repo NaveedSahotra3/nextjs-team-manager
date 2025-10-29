@@ -1,3 +1,4 @@
+// src/db/schema.ts
 import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, varchar, uuid, pgEnum, index } from "drizzle-orm/pg-core";
 
@@ -111,6 +112,8 @@ export const teamMembers = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     role: roleEnum("role").notNull().default("member"),
     joinedAt: timestamp("joined_at", { mode: "date" }).defaultNow().notNull(),
+    removedAt: timestamp("removed_at", { mode: "date" }),
+    removedBy: uuid("removed_by").references(() => users.id, { onDelete: "set null" }),
   },
   (table) => ({
     teamIdIdx: index("team_members_team_id_idx").on(table.teamId),
