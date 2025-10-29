@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
@@ -32,9 +32,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check if user has admin access
+    // Check if user has admin access (exclude removed members)
     const membership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, session.user.id)),
+      where: and(
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, session.user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
     const hasAccess =

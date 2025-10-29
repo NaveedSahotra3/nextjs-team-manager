@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -32,9 +32,13 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check if user has admin access
+    // Check if user has admin access (exclude removed members)
     const membership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, session.user.id)),
+      where: and(
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, session.user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
     const hasAccess =
@@ -45,8 +49,8 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get all pending invitations
-    const pendingInvitations = await db
+    // Get all invitations for this team
+    const teamInvitations = await db
       .select({
         id: invitations.id,
         email: invitations.email,
@@ -63,7 +67,35 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
       .innerJoin(users, eq(invitations.invitedBy, users.id))
       .where(eq(invitations.teamId, team.id));
 
-    return NextResponse.json({ invitations: pendingInvitations }, { status: 200 });
+    // Filter out accepted invitations where member was removed
+    const filteredInvitations = await Promise.all(
+      teamInvitations.map(async (inv) => {
+        // If invitation is accepted, check if member is still active
+        if (inv.status === "accepted") {
+          const invitedUser = await db.query.users.findFirst({
+            where: eq(users.email, inv.email),
+          });
+
+          if (invitedUser) {
+            const membership = await db.query.teamMembers.findFirst({
+              where: and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, invitedUser.id)),
+            });
+
+            // If member was removed, exclude this invitation
+            if (!membership || membership.removedAt) {
+              return null;
+            }
+          }
+        }
+
+        return inv;
+      })
+    );
+
+    // Remove null entries (removed members)
+    const activeInvitations = filteredInvitations.filter((inv) => inv !== null);
+
+    return NextResponse.json({ invitations: activeInvitations }, { status: 200 });
   } catch (error) {
     console.error("Error fetching invitations:", error);
     return NextResponse.json({ error: "Failed to fetch invitations" }, { status: 500 });
@@ -95,9 +127,13 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    // Check if user has admin access
+    // Check if user has admin access (exclude removed members)
     const membership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, team.id), eq(teamMembers.userId, session.user.id)),
+      where: and(
+        eq(teamMembers.teamId, team.id),
+        eq(teamMembers.userId, session.user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
     const hasAccess =
@@ -111,7 +147,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       );
     }
 
-    // Check if user is already a member
+    // Check if user is already a member or was recently removed
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, validatedData.email),
     });
@@ -122,7 +158,27 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       });
 
       if (existingMembership) {
-        return NextResponse.json({ error: "User is already a team member" }, { status: 400 });
+        // Check if member is active (not removed)
+        if (!existingMembership.removedAt) {
+          return NextResponse.json({ error: "User is already a team member" }, { status: 400 });
+        }
+
+        // Check if member was removed recently (within 24 hours)
+        const hoursSinceRemoval =
+          (Date.now() - existingMembership.removedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSinceRemoval < 24) {
+          return NextResponse.json(
+            {
+              error:
+                "This user was recently removed from the team. Please wait 24 hours before re-inviting.",
+            },
+            { status: 400 }
+          );
+        }
+
+        // User was removed more than 24 hours ago, allow re-invite
+        // Delete the old membership record to keep data clean
+        await db.delete(teamMembers).where(eq(teamMembers.id, existingMembership.id));
       }
     }
 

@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
@@ -140,16 +140,30 @@ export async function POST(_request: Request, { params }: { params: { token: str
       );
     }
 
-    // Check if user is already a member
+    // Check if user is already an active member (exclude removed members)
     const existingMembership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, invitation.teamId), eq(teamMembers.userId, user.id)),
+      where: and(
+        eq(teamMembers.teamId, invitation.teamId),
+        eq(teamMembers.userId, user.id),
+        isNull(teamMembers.removedAt)
+      ),
     });
 
     if (existingMembership) {
       return NextResponse.json({ error: "You are already a member of this team" }, { status: 400 });
     }
 
-    // Add user to team
+    // Check if there's an old removed membership record for this user
+    const removedMembership = await db.query.teamMembers.findFirst({
+      where: and(eq(teamMembers.teamId, invitation.teamId), eq(teamMembers.userId, user.id)),
+    });
+
+    if (removedMembership?.removedAt) {
+      // Delete the old removed record to keep data clean
+      await db.delete(teamMembers).where(eq(teamMembers.id, removedMembership.id));
+    }
+
+    // Add user to team (fresh membership)
     await db.insert(teamMembers).values({
       teamId: invitation.teamId,
       userId: user.id,
