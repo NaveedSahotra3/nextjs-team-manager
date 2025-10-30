@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Mail, Users, UserPlus, Settings } from "lucide-react";
+import { ArrowLeft, Mail, Users, UserPlus, Settings, CreditCard, Image } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -213,6 +213,67 @@ export default function TeamDetailPage() {
             <p className="text-sm text-green-800">{inviteSuccess}</p>
           </div>
         )}
+
+        {/* Quick Actions */}
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href={`/teams/${slug}/credits`}>
+            <Card className="cursor-pointer transition-all hover:border-blue-300 hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                  <CreditCard className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Credits</h3>
+                  <p className="text-sm text-gray-600">Manage credits</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href={`/teams/${slug}/headshots`}>
+            <Card className="cursor-pointer transition-all hover:border-purple-300 hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100">
+                  <Image className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Headshots</h3>
+                  <p className="text-sm text-gray-600">AI headshots</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href={`/teams/${slug}`}>
+            <Card className="cursor-pointer transition-all hover:border-green-300 hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Members</h3>
+                  <p className="text-sm text-gray-600">{team.members.length} members</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {canManageTeam() && (
+            <Link href={`/teams/${slug}/settings`}>
+              <Card className="cursor-pointer transition-all hover:border-gray-300 hover:shadow-md">
+                <CardContent className="flex items-center gap-4 p-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+                    <Settings className="h-6 w-6 text-gray-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Settings</h3>
+                    <p className="text-sm text-gray-600">Team settings</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Members Section */}
