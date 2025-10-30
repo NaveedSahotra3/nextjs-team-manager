@@ -7,7 +7,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/db";
 import { teamCredits, payments, teams } from "@/db/schema";
 import { authOptions } from "@/lib/auth";
-
+// testing
 /**
  * POST /api/stripe/manual-add-credits
  * Manually add credits to a team (for development/testing only)
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    //eslint-diable-next-line
     const { teamSlug, credits, amount = 7900 } = await req.json();
 
     if (!teamSlug || !credits) {
