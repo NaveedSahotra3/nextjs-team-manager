@@ -7,19 +7,13 @@ import { teamCredits, memberCredits } from "@/db/schema";
 /**
  * Initialize credit tracking for a new team
  */
-export async function initializeTeamCredits(
-  teamId: string,
-  estimatedMembers: number,
-  estimatedHeadshotsPerMember: number
-) {
+export async function initializeTeamCredits(teamId: string) {
   const [teamCredit] = await db
     .insert(teamCredits)
     .values({
       teamId,
       totalCredits: "0", // No credits until payment
       usedCredits: "0",
-      estimatedHeadshotsPerMember: estimatedHeadshotsPerMember.toString(),
-      estimatedMembers: estimatedMembers.toString(),
     })
     .returning();
 
@@ -222,8 +216,6 @@ export async function getTeamCreditOverview(teamId: string) {
     total,
     used,
     available: total - used,
-    estimatedMembers: parseInt(teamCredit.estimatedMembers),
-    estimatedHeadshotsPerMember: parseInt(teamCredit.estimatedHeadshotsPerMember),
     memberBreakdown,
   };
 }

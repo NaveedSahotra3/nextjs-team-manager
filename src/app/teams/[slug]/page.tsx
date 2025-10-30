@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Mail, Users, UserPlus, Settings, CreditCard, Image } from "lucide-react";
+import { ArrowLeft, Mail, Users, UserPlus, Settings } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -194,7 +194,7 @@ export default function TeamDetailPage() {
         <div className="mb-8 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{team.name}</h1>
-            <p className="mt-1 text-gray-600">/{team.slug}</p>
+            {/* <p className="mt-1 text-gray-600">/{team.slug}</p> */}
             {team.description && <p className="mt-2 text-gray-700">{team.description}</p>}
           </div>
           {session?.user?.id === team.ownerId && (
@@ -215,7 +215,7 @@ export default function TeamDetailPage() {
         )}
 
         {/* Quick Actions */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Link href={`/teams/${slug}/credits`}>
             <Card className="cursor-pointer transition-all hover:border-blue-300 hover:shadow-md">
               <CardContent className="flex items-center gap-4 p-6">
@@ -273,7 +273,7 @@ export default function TeamDetailPage() {
               </Card>
             </Link>
           )}
-        </div>
+        </div> */}
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Members Section */}
