@@ -1,0 +1,7 @@
+# Force fresh build - exclude development files
+.git
+.husky
+node_modules
+.env.local
+.env*.local
+*.log
