@@ -210,7 +210,9 @@ export default function TeamCreditsPage() {
 
   const handleAutoDistribute = async () => {
     // eslint-disable-next-line no-alert
-    if (!confirm("This will distribute all available credits equally among team members. Continue?")) {
+    if (
+      !confirm("This will distribute all available credits equally among team members. Continue?")
+    ) {
       return;
     }
 
