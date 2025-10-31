@@ -4,9 +4,7 @@
 
 @layer base {
   :root {
-    /* Light mode: Clean minimal palette */
-    /* Converted: #fafafa = hsl(0, 0%, 98%)  (kept same for background/grey) */
-    /* Converted: #ffffff = hsl(0, 0%, 100%) */
+    /* Light mode */
     --background: 0 0% 98%; /* #fafafa */
     --foreground: 0 0% 9%;
     --card: 0 0% 100%; /* #ffffff */
@@ -14,18 +12,15 @@
     --popover: 0 0% 100%; /* #ffffff */
     --popover-foreground: 0 0% 9%;
 
-    /* Green accent color - easy to change */
     --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%; /* slightly darker gray section */
+    --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 9%;
 
-    /* Muted grey tones */
     --muted: 0 0% 98%; /* #fafafa */
     --muted-foreground: 0 0% 40%;
 
-    /* Green hover/active states */
     --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
 
@@ -37,14 +32,12 @@
     --ring: 142 76% 36%;
     --radius: 0.5rem;
 
-    /* Chart colors - green themed */
     --chart-1: 142 76% 36%;
     --chart-2: 160 60% 45%;
     --chart-3: 173 58% 39%;
     --chart-4: 142 60% 50%;
     --chart-5: 120 50% 45%;
 
-    /* Sidebar - light grey */
     --sidebar-background: 0 0% 98%; /* #fafafa */
     --sidebar-foreground: 0 0% 9%;
     --sidebar-primary: 142 76% 36%;
@@ -56,31 +49,39 @@
   }
 
   .dark {
-    /* Dark mode unchanged */
-    --background: 0 0% 8%;
+    /* Dark mode updated: background #1f1f1f instead of #1a1a1a */
+    --background: 0 0% 12%; /* #1f1f1f */
     --foreground: 0 0% 98%;
     --card: 0 0% 10%;
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 98%;
+
     --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
+
     --secondary: 0 0% 14%;
     --secondary-foreground: 0 0% 98%;
+
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 65%;
+
     --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 142 76% 36%;
+
     --chart-1: 142 76% 36%;
     --chart-2: 160 60% 45%;
     --chart-3: 173 58% 39%;
     --chart-4: 142 60% 50%;
     --chart-5: 120 50% 45%;
+
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 142 76% 36%;
