@@ -46,7 +46,7 @@ export function TeamSwitcher({ teams, currentTeam }: TeamSwitcherProps) {
         <Button
           variant="outline"
           role="combobox"
-          className="w-full justify-between border-border/50 bg-background/50 hover:bg-background"
+          className="w-full justify-between border-border/50 bg-card"
         >
           <div className="flex items-center gap-2">
             {currentTeam ? (
@@ -77,7 +77,7 @@ export function TeamSwitcher({ teams, currentTeam }: TeamSwitcherProps) {
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                  <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                     {getInitials(team.name)}
                   </AvatarFallback>
                 </Avatar>
