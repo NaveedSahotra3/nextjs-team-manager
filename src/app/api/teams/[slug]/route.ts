@@ -46,17 +46,15 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
     }
 
     // Get all active team members with user details (exclude removed members)
-    const members = await db
+    const membersRaw = await db
       .select({
         id: teamMembers.id,
+        userId: users.id,
+        userName: users.name,
+        userEmail: users.email,
+        userImage: users.image,
         role: teamMembers.role,
         joinedAt: teamMembers.joinedAt,
-        user: {
-          id: users.id,
-          name: users.name,
-          email: users.email,
-          image: users.image,
-        },
       })
       .from(teamMembers)
       .innerJoin(users, eq(teamMembers.userId, users.id))
@@ -64,10 +62,8 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
 
     return NextResponse.json(
       {
-        team: {
-          ...team,
-          members,
-        },
+        ...team,
+        members: membersRaw,
       },
       { status: 200 }
     );

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { db } from "@/db";
-import { invitations, teamMembers, users } from "@/db/schema";
+import { invitations, teamMembers } from "@/db/schema";
 import { authOptions } from "@/lib/auth";
 
 /**
@@ -121,17 +121,15 @@ export async function POST(_request: Request, { params }: { params: { token: str
       );
     }
 
-    // Get user details
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-    });
+    // Get user email from session
+    const userEmail = session.user.email;
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!userEmail) {
+      return NextResponse.json({ error: "User email not found in session" }, { status: 404 });
     }
 
     // Verify email matches (case-insensitive)
-    if (user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+    if (userEmail.toLowerCase() !== invitation.email.toLowerCase()) {
       return NextResponse.json(
         {
           error: `This invitation was sent to ${invitation.email}. Please sign in with that email address.`,
@@ -144,7 +142,7 @@ export async function POST(_request: Request, { params }: { params: { token: str
     const existingMembership = await db.query.teamMembers.findFirst({
       where: and(
         eq(teamMembers.teamId, invitation.teamId),
-        eq(teamMembers.userId, user.id),
+        eq(teamMembers.userId, session.user.id),
         isNull(teamMembers.removedAt)
       ),
     });
@@ -155,7 +153,10 @@ export async function POST(_request: Request, { params }: { params: { token: str
 
     // Check if there's an old removed membership record for this user
     const removedMembership = await db.query.teamMembers.findFirst({
-      where: and(eq(teamMembers.teamId, invitation.teamId), eq(teamMembers.userId, user.id)),
+      where: and(
+        eq(teamMembers.teamId, invitation.teamId),
+        eq(teamMembers.userId, session.user.id)
+      ),
     });
 
     if (removedMembership?.removedAt) {
@@ -166,7 +167,7 @@ export async function POST(_request: Request, { params }: { params: { token: str
     // Add user to team (fresh membership)
     await db.insert(teamMembers).values({
       teamId: invitation.teamId,
-      userId: user.id,
+      userId: session.user.id,
       role: invitation.role,
     });
 

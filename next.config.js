@@ -2,7 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  
+
+  // Skip static generation errors for auth pages
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
+
   // Security Headers
   async headers() {
     return [
