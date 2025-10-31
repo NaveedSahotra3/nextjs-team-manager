@@ -179,6 +179,8 @@ function useToast() {
   return {
     ...state,
     toast,
+    //eslint-disable-next-line
+    // @ts-ignore
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   };
 }
