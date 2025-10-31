@@ -2,6 +2,8 @@ import { eq, and, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
+export const dynamic = "force-dynamic";
+
 import { AppShell } from "@/components/layout/AppShell";
 import { TeamManagement } from "@/components/teams/TeamManagement";
 import { db } from "@/db";

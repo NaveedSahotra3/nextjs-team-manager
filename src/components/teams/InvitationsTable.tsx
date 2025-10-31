@@ -60,7 +60,7 @@ export function InvitationsTable({ teamSlug, userRole }: InvitationsTableProps) 
         setInvitations(data.invitations || []);
       }
     } catch {
-      console.error("Error fetching invitations:", error);
+      console.error("Error fetching invitations");
     } finally {
       setLoading(false);
     }

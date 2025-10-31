@@ -4,6 +4,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
+export const dynamic = "force-dynamic";
+
 import { AnalyticsCharts } from "@/components/dashboard/AnalyticsCharts";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
@@ -71,9 +73,9 @@ async function getAnalytics(teamSlug: string, _userId: string) {
       );
 
     // Get daily data for the past week
-    const dailyData = await db
+    const dailyDataRaw = await db
       .select({
-        date: sql<string>`DATE(${teamMembers.joinedAt})`,
+        date: sql<string>`DATE(${teamMembers.joinedAt})::text`,
         signups: sql<number>`count(*)::int`,
         firstHeadshots: sql<number>`count(*) FILTER (WHERE ${teamMembers.firstHeadshots} = true)::int`,
         uploaded: sql<number>`count(*) FILTER (WHERE ${teamMembers.uploadedToLinkedin} = true)::int`,
@@ -87,6 +89,12 @@ async function getAnalytics(teamSlug: string, _userId: string) {
         )
       )
       .groupBy(sql`DATE(${teamMembers.joinedAt})`);
+
+    // Filter out any entries with undefined dates
+    const dailyData = dailyDataRaw.filter(
+      (d): d is { date: string; signups: number; firstHeadshots: number; uploaded: number } =>
+        d.date !== null && d.date !== undefined
+    );
 
     // Get weekly invites count
     const [weeklyInvites] = await db
@@ -118,21 +126,18 @@ async function getAnalytics(teamSlug: string, _userId: string) {
       );
 
     // Format daily data to ensure all 7 days are present
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const last7Days: string[] = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
-      return d.toISOString().split("T")[0];
+      return d.toISOString().split("T")[0]!;
     });
 
-    const formattedDailyData = last7Days.map((date) => {
-      const dayData = dailyData.find((d) => d.date === date);
-      return {
-        date,
-        signups: dayData?.signups || 0,
-        firstHeadshots: dayData?.firstHeadshots || 0,
-        uploaded: dayData?.uploaded || 0,
-      };
-    });
+    const formattedDailyData = last7Days.map((date) => ({
+      date,
+      signups: dailyData.find((d) => d.date === date)?.signups ?? 0,
+      firstHeadshots: dailyData.find((d) => d.date === date)?.firstHeadshots ?? 0,
+      uploaded: dailyData.find((d) => d.date === date)?.uploaded ?? 0,
+    }));
 
     return {
       totals: {

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
+export const dynamic = "force-dynamic";
+
 import { AppShell } from "@/components/layout/AppShell";
 import { CreateTeamForm } from "@/components/teams/CreateTeamForm";
 import { authOptions } from "@/lib/auth";

@@ -53,7 +53,7 @@ const COLORS = [
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-];
+] as const;
 
 export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
   // Chart 1: Total counts bar chart

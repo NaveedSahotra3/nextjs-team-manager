@@ -62,7 +62,7 @@ export function MembersTable({ teamSlug, userId, userRole }: MembersTableProps) 
         setMembers(data.members || []);
       }
     } catch {
-      console.error("Error fetching members:", error);
+      console.error("Error fetching members");
     } finally {
       setLoading(false);
     }
