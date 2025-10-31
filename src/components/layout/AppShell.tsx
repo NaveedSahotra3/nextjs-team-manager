@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { TeamSwitcher } from "@/components/team-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,9 +68,9 @@ export function AppShell({ children, userName, userEmail, teams, currentTeam }: 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <div className="hidden w-64 flex-col border-r border-border/50 bg-background md:flex">
+      <div className="hidden w-64 flex-col bg-muted/30 md:flex">
         {/* Logo */}
-        <div className="flex h-16 items-center border-b border-border/50 px-6">
+        <div className="flex h-16 items-center border-b border-border px-6">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <span className="text-sm font-bold">TM</span>
@@ -79,7 +80,7 @@ export function AppShell({ children, userName, userEmail, teams, currentTeam }: 
         </div>
 
         {/* Team Switcher */}
-        <div className="border-b border-border/50 p-4">
+        <div className="border-b border-border p-4">
           <TeamSwitcher teams={teams} currentTeam={currentTeam} />
         </div>
 
@@ -105,10 +106,10 @@ export function AppShell({ children, userName, userEmail, teams, currentTeam }: 
                 key={item.name}
                 href={isDisabled ? "#" : href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    ? "bg-accent text-accent-foreground shadow-sm"
+                    : "text-foreground hover:bg-accent/80 hover:text-accent-foreground",
                   isDisabled && "pointer-events-none opacity-50"
                 )}
                 onClick={(e) => {
@@ -125,10 +126,17 @@ export function AppShell({ children, userName, userEmail, teams, currentTeam }: 
         </nav>
 
         {/* User Menu */}
-        <div className="border-t border-border/50 p-4">
+        <div className="border-t border-border p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Theme</span>
+            <ThemeToggle />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="w-full justify-start gap-3 px-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-2 hover:bg-accent/80 hover:text-accent-foreground"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                     {getInitials(userName)}
@@ -160,9 +168,9 @@ export function AppShell({ children, userName, userEmail, teams, currentTeam }: 
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden bg-muted/30">
         {/* Mobile Header - Optional */}
-        <div className="flex h-16 items-center border-b border-border/50 px-6 md:hidden">
+        <div className="flex h-16 items-center border-b border-border bg-muted/30 px-6 md:hidden">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <span className="text-sm font-bold">TM</span>
@@ -171,8 +179,11 @@ export function AppShell({ children, userName, userEmail, teams, currentTeam }: 
           </Link>
         </div>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Page Content - with 20px top strip showing sidebar color */}
+        <main
+          className="flex-1 overflow-y-auto rounded-tl-2xl bg-card"
+          style={{ marginTop: "20px", marginRight: "20px" }}
+        >
           <div className="container mx-auto p-6 lg:p-8">{children}</div>
         </main>
       </div>

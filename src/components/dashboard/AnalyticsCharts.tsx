@@ -120,7 +120,7 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
   return (
     <div className="space-y-6">
       {/* Chart 1: Bar Chart - Full Width */}
-      <Card>
+      <Card className="rounded-xl border-border/50 bg-muted/50">
         <CardHeader>
           <CardTitle>Total Metrics Overview</CardTitle>
           <CardDescription>All-time counts across all metrics</CardDescription>
@@ -136,9 +136,9 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
             className="h-[300px] w-full"
           >
             <BarChart data={totalCountsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <XAxis dataKey="name" className="text-xs" />
+              <YAxis className="text-xs" />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Bar dataKey="value" radius={[8, 8, 0, 0]} />
             </BarChart>
@@ -147,7 +147,7 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
       </Card>
 
       {/* Chart 2: Line Chart - Full Width */}
-      <Card>
+      <Card className="rounded-xl border-border/50 bg-muted/50">
         <CardHeader>
           <CardTitle>Weekly Activity Trends</CardTitle>
           <CardDescription>Daily breakdown for the last 7 days</CardDescription>
@@ -171,9 +171,9 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
             className="h-[300px] w-full"
           >
             <LineChart data={dailyChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+              <XAxis dataKey="date" className="text-xs" />
+              <YAxis className="text-xs" />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent />} />
               <Line
@@ -205,7 +205,7 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
       {/* Charts 3-6: Donut Charts - Half Width */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Chart 3 */}
-        <Card>
+        <Card className="rounded-xl border-border/50 bg-muted/50">
           <CardHeader>
             <CardTitle>Invites vs Sign Ups</CardTitle>
             <CardDescription>Last 7 days</CardDescription>
@@ -242,7 +242,7 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
         </Card>
 
         {/* Chart 4 */}
-        <Card>
+        <Card className="rounded-xl border-border/50 bg-muted/50">
           <CardHeader>
             <CardTitle>Sign Ups vs First Headshots</CardTitle>
             <CardDescription>Last 7 days</CardDescription>
@@ -279,7 +279,7 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
         </Card>
 
         {/* Chart 5 */}
-        <Card>
+        <Card className="rounded-xl border-border/50 bg-muted/50">
           <CardHeader>
             <CardTitle>First Headshots vs Favorites</CardTitle>
             <CardDescription>All-time totals</CardDescription>
@@ -316,7 +316,7 @@ export function AnalyticsCharts({ data }: AnalyticsChartsProps) {
         </Card>
 
         {/* Chart 6 */}
-        <Card>
+        <Card className="rounded-xl border-border/50 bg-muted/50">
           <CardHeader>
             <CardTitle>Favorites vs Uploaded</CardTitle>
             <CardDescription>All-time totals</CardDescription>
