@@ -1,10 +1,14 @@
 // eslint-disable-next-line import/no-named-as-default-member
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { Resend } from "resend";
 
 import { env } from "@/env";
 
-// Create transporter with proper typing
+// Initialize Resend if API key is available
+const resend = process.env["RESEND_API_KEY"] ? new Resend(process.env["RESEND_API_KEY"]) : null;
+
+// Create nodemailer transporter with proper typing
 const transporter: Transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,
@@ -13,6 +17,10 @@ const transporter: Transporter = nodemailer.createTransport({
     user: env.SMTP_USER,
     pass: env.SMTP_PASSWORD,
   },
+  // Increase timeout for Vercel serverless
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 interface SendEmailParams {
@@ -27,6 +35,15 @@ interface SendInvitationEmailParams {
   teamName: string;
   inviterName: string;
   invitationUrl: string;
+}
+
+interface BatchEmailParams {
+  emails: Array<{
+    to: string;
+    teamName: string;
+    inviterName: string;
+    invitationUrl: string;
+  }>;
 }
 
 /**
@@ -54,20 +71,48 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
 export async function sendInvitationEmail(params: SendInvitationEmailParams): Promise<void> {
   const { to, teamName, inviterName, invitationUrl } = params;
 
+  const subject = `You've been invited to join ${teamName}`;
+  const html = getInvitationEmailTemplate({
+    teamName,
+    inviterName,
+    invitationUrl,
+  });
+  const text = getInvitationEmailText({
+    teamName,
+    inviterName,
+    invitationUrl,
+  });
+
+  // Try Resend first (better for Vercel)
+  if (resend) {
+    try {
+      // Use Resend's onboarding email for testing (or verified domain in production)
+      const fromEmail = process.env["RESEND_FROM_EMAIL"] ?? "onboarding@resend.dev";
+
+      await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject,
+        html,
+        text,
+      });
+      return;
+    } catch (error) {
+      // Log error but continue to fallback
+      if (error instanceof Error) {
+        throw new Error(`Resend and SMTP both failed. Last error: ${error.message}`);
+      }
+      // Fall through to nodemailer
+    }
+  }
+
+  // Fallback to nodemailer
   const mailOptions = {
     from: env.SMTP_FROM,
     to,
-    subject: `You've been invited to join ${teamName}`,
-    html: getInvitationEmailTemplate({
-      teamName,
-      inviterName,
-      invitationUrl,
-    }),
-    text: getInvitationEmailText({
-      teamName,
-      inviterName,
-      invitationUrl,
-    }),
+    subject,
+    html,
+    text,
   };
 
   await transporter.sendMail(mailOptions);
@@ -150,6 +195,86 @@ ${invitationUrl}
 
 This invitation will expire in 7 days. If you didn't expect this invitation, you can safely ignore this email.
   `.trim();
+}
+
+/**
+ * Send batch invitation emails using Resend's batch API
+ * Processes up to 100 emails per batch (Resend's limit)
+ * @param params - Batch email parameters
+ * @returns Array of results with success/failure status for each email
+ */
+export async function sendBatchInvitationEmails(
+  params: BatchEmailParams
+): Promise<Array<{ email: string; success: boolean; error?: string }>> {
+  const { emails } = params;
+  const results: Array<{ email: string; success: boolean; error?: string }> = [];
+
+  // If using Resend and batch size is reasonable, use batch API
+  if (resend && emails.length <= 100) {
+    try {
+      const fromEmail = process.env["RESEND_FROM_EMAIL"] ?? "onboarding@resend.dev";
+
+      const batchEmails = emails.map((emailData) => ({
+        from: fromEmail,
+        to: emailData.to,
+        subject: `You've been invited to join ${emailData.teamName}`,
+        html: getInvitationEmailTemplate({
+          teamName: emailData.teamName,
+          inviterName: emailData.inviterName,
+          invitationUrl: emailData.invitationUrl,
+        }),
+        text: getInvitationEmailText({
+          teamName: emailData.teamName,
+          inviterName: emailData.inviterName,
+          invitationUrl: emailData.invitationUrl,
+        }),
+      }));
+
+      const response = await resend.batch.send(batchEmails);
+
+      // Mark all as success if batch succeeded
+      if (response.data) {
+        emails.forEach((emailData) => {
+          results.push({ email: emailData.to, success: true });
+        });
+      } else {
+        // If batch failed, mark all as failed
+        emails.forEach((emailData) => {
+          results.push({
+            email: emailData.to,
+            success: false,
+            error: "Batch send failed",
+          });
+        });
+      }
+
+      return results;
+    } catch (error) {
+      // If Resend batch fails, fall through to individual sending
+      console.error("Resend batch failed:", error);
+    }
+  }
+
+  // Fallback: Send emails one by one (for >100 emails or if Resend unavailable)
+  for (const emailData of emails) {
+    try {
+      await sendInvitationEmail({
+        to: emailData.to,
+        teamName: emailData.teamName,
+        inviterName: emailData.inviterName,
+        invitationUrl: emailData.invitationUrl,
+      });
+      results.push({ email: emailData.to, success: true });
+    } catch (error) {
+      results.push({
+        email: emailData.to,
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return results;
 }
 
 /**

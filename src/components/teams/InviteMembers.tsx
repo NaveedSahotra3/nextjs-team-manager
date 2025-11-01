@@ -22,6 +22,24 @@ const validateEmail = (email: string): boolean => {
   return emailRegex.test(email.trim());
 };
 
+interface ProgressLog {
+  timestamp: Date;
+  message: string;
+  type: "info" | "success" | "error" | "warning";
+}
+
+interface InvitationProgress {
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  alreadyMembers: number;
+  alreadyInvited: number;
+  emailFailed: number;
+  logs: ProgressLog[];
+  isComplete: boolean;
+}
+
 export function InviteMembers({ teamSlug }: InviteMembersProps) {
   const [emailInput, setEmailInput] = React.useState("");
   const [validEmails, setValidEmails] = React.useState<string[]>([]);
@@ -31,8 +49,73 @@ export function InviteMembers({ teamSlug }: InviteMembersProps) {
   const [inviteLink, setInviteLink] = React.useState("");
   const [generatingLink, setGeneratingLink] = React.useState(false);
   const [copiedLink, setCopiedLink] = React.useState(false);
+
+  // Progress tracking states
+  const [progress, setProgress] = React.useState<InvitationProgress | null>(null);
+  const [showProgress, setShowProgress] = React.useState(false);
+
   const router = useRouter();
   const { toast } = useToast();
+
+  // Restore progress from localStorage on mount
+  React.useEffect(() => {
+    const savedProgress = localStorage.getItem(`invite-progress-${teamSlug}`);
+    if (savedProgress) {
+      try {
+        const parsed = JSON.parse(savedProgress) as InvitationProgress;
+        // Convert string dates back to Date objects
+        parsed.logs = parsed.logs.map((log) => ({
+          ...log,
+          timestamp: new Date(log.timestamp),
+        }));
+        setProgress(parsed);
+        setShowProgress(true);
+      } catch (error) {
+        console.error("Failed to restore progress:", error);
+        localStorage.removeItem(`invite-progress-${teamSlug}`);
+      }
+    }
+  }, [teamSlug]);
+
+  // Save progress to localStorage
+  const saveProgress = React.useCallback(
+    (progressData: InvitationProgress) => {
+      localStorage.setItem(`invite-progress-${teamSlug}`, JSON.stringify(progressData));
+    },
+    [teamSlug]
+  );
+
+  // Clear progress
+  const clearProgress = React.useCallback(() => {
+    setProgress(null);
+    setShowProgress(false);
+    localStorage.removeItem(`invite-progress-${teamSlug}`);
+  }, [teamSlug]);
+
+  // Add log entry
+  const addLog = React.useCallback(
+    (message: string, type: "info" | "success" | "error" | "warning" = "info") => {
+      setProgress((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        const newProgress = {
+          ...prev,
+          logs: [
+            ...prev.logs,
+            {
+              timestamp: new Date(),
+              message,
+              type,
+            },
+          ],
+        };
+        saveProgress(newProgress);
+        return newProgress;
+      });
+    },
+    [saveProgress]
+  );
 
   // Handle email input with comma separation
   const handleEmailInputChange = (value: string) => {
@@ -115,80 +198,197 @@ export function InviteMembers({ teamSlug }: InviteMembersProps) {
     }
 
     setLoading(true);
+    setShowProgress(true);
+
+    // Initialize progress
+    const initialProgress: InvitationProgress = {
+      total: validEmails.length,
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      alreadyMembers: 0,
+      alreadyInvited: 0,
+      emailFailed: 0,
+      logs: [
+        {
+          timestamp: new Date(),
+          message: `Starting bulk invitation process for ${validEmails.length} email${validEmails.length > 1 ? "s" : ""}...`,
+          type: "info",
+        },
+      ],
+      isComplete: false,
+    };
+
+    setProgress(initialProgress);
+    saveProgress(initialProgress);
 
     try {
-      // Send invitations one by one (can be optimized with batch API later)
-      let successCount = 0;
-      let errorCount = 0;
-      const newDuplicateEmails: string[] = [];
-      const errors: string[] = [];
+      // Use batch API for better performance
+      addLog(
+        `Sending ${validEmails.length} invitation${validEmails.length > 1 ? "s" : ""} using batch API...`,
+        "info"
+      );
 
-      for (const email of validEmails) {
-        try {
-          const response = await fetch(`/api/teams/${teamSlug}/invitations`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, role: "member" }),
+      const response = await fetch(`/api/teams/${teamSlug}/invitations/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails: validEmails, role: "member" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Batch invitation failed");
+      }
+
+      const data = (await response.json()) as {
+        summary: {
+          total: number;
+          successful: number;
+          failed: number;
+          alreadyMembers: number;
+          alreadyInvited: number;
+          emailFailed: number;
+        };
+        results: Array<{
+          email: string;
+          success: boolean;
+          error?: string;
+          status?: string;
+        }>;
+      };
+
+      // Update progress with results
+      const finalProgress: InvitationProgress = {
+        total: data.summary.total,
+        processed: data.summary.total,
+        successful: data.summary.successful,
+        failed: data.summary.failed,
+        alreadyMembers: data.summary.alreadyMembers,
+        alreadyInvited: data.summary.alreadyInvited,
+        emailFailed: data.summary.emailFailed,
+        logs: [
+          ...initialProgress.logs,
+          {
+            timestamp: new Date(),
+            message: `Processed ${data.summary.total} email${data.summary.total > 1 ? "s" : ""}`,
+            type: "info",
+          },
+        ],
+        isComplete: true,
+      };
+
+      // Add detailed logs for each category
+      if (data.summary.successful > 0) {
+        finalProgress.logs.push({
+          timestamp: new Date(),
+          message: `✓ Successfully sent ${data.summary.successful} invitation${data.summary.successful > 1 ? "s" : ""}`,
+          type: "success",
+        });
+      }
+
+      if (data.summary.alreadyMembers > 0) {
+        finalProgress.logs.push({
+          timestamp: new Date(),
+          message: `⚠ ${data.summary.alreadyMembers} email${data.summary.alreadyMembers > 1 ? "s" : ""} already team member${data.summary.alreadyMembers > 1 ? "s" : ""}`,
+          type: "warning",
+        });
+      }
+
+      if (data.summary.alreadyInvited > 0) {
+        finalProgress.logs.push({
+          timestamp: new Date(),
+          message: `⚠ ${data.summary.alreadyInvited} invitation${data.summary.alreadyInvited > 1 ? "s" : ""} already sent previously`,
+          type: "warning",
+        });
+      }
+
+      if (data.summary.emailFailed > 0) {
+        finalProgress.logs.push({
+          timestamp: new Date(),
+          message: `✗ ${data.summary.emailFailed} email${data.summary.emailFailed > 1 ? "s" : ""} failed to send`,
+          type: "error",
+        });
+      }
+
+      // Add individual email logs
+      data.results.forEach((result) => {
+        if (result.status === "sent") {
+          finalProgress.logs.push({
+            timestamp: new Date(),
+            message: `✓ ${result.email} - Invitation sent successfully`,
+            type: "success",
           });
-
-          if (response.ok) {
-            successCount++;
-            // Remove from valid emails on success
-            setValidEmails((prev) => prev.filter((e) => e !== email));
-          } else {
-            errorCount++;
-            const data = await response.json();
-            const errorMessage = data.error || "Failed";
-
-            // Check if it's a duplicate/already invited error
-            if (
-              errorMessage.includes("already") ||
-              errorMessage.includes("invitation has already been sent") ||
-              errorMessage.includes("already a team member")
-            ) {
-              newDuplicateEmails.push(email);
-              // Remove from valid and add to duplicate
-              setValidEmails((prev) => prev.filter((e) => e !== email));
-            } else {
-              errors.push(`${email}: ${errorMessage}`);
-            }
-          }
-        } catch {
-          errorCount++;
-          errors.push(`${email}: Network error`);
+        } else if (result.status === "already_member") {
+          finalProgress.logs.push({
+            timestamp: new Date(),
+            message: `⚠ ${result.email} - Already a team member`,
+            type: "warning",
+          });
+        } else if (result.status === "already_invited") {
+          finalProgress.logs.push({
+            timestamp: new Date(),
+            message: `⚠ ${result.email} - Already invited`,
+            type: "warning",
+          });
+        } else if (result.status === "email_failed") {
+          finalProgress.logs.push({
+            timestamp: new Date(),
+            message: `✗ ${result.email} - Email failed: ${result.error}`,
+            type: "error",
+          });
+        } else if (!result.success) {
+          finalProgress.logs.push({
+            timestamp: new Date(),
+            message: `✗ ${result.email} - ${result.error}`,
+            type: "error",
+          });
         }
-      }
+      });
 
-      // Update duplicate emails
-      if (newDuplicateEmails.length > 0) {
-        setDuplicateEmails([...duplicateEmails, ...newDuplicateEmails]);
-      }
+      finalProgress.logs.push({
+        timestamp: new Date(),
+        message: "Invitation process completed",
+        type: "info",
+      });
 
-      // Show results
-      if (successCount > 0 && errorCount === 0) {
+      setProgress(finalProgress);
+      saveProgress(finalProgress);
+
+      // Clear successfully sent emails from the input
+      const failedEmails = data.results.filter((r) => !r.success).map((r) => r.email);
+      setValidEmails(failedEmails);
+
+      // Update duplicate emails list
+      const duplicates = data.results
+        .filter((r) => r.status === "already_member" || r.status === "already_invited")
+        .map((r) => r.email);
+      setDuplicateEmails([...duplicateEmails, ...duplicates]);
+
+      // Show summary toast
+      if (data.summary.successful > 0 && data.summary.failed === 0) {
         toast({
           title: "Success",
-          description: `Successfully sent ${successCount} invitation${successCount > 1 ? "s" : ""}`,
+          description: `Successfully sent ${data.summary.successful} invitation${data.summary.successful > 1 ? "s" : ""}`,
         });
         router.refresh();
-      } else if (successCount > 0 && errorCount > 0) {
+      } else if (data.summary.successful > 0 && data.summary.failed > 0) {
         toast({
           title: "Partial Success",
-          description: `Sent ${successCount} invitation${successCount > 1 ? "s" : ""}, ${errorCount} failed`,
+          description: `Sent ${data.summary.successful} invitation${data.summary.successful > 1 ? "s" : ""}, ${data.summary.failed} had issues`,
           variant: "default",
         });
         router.refresh();
       } else {
         toast({
           title: "Error",
-          description: `Failed to send ${errorCount} invitation${errorCount > 1 ? "s" : ""}. ${errors.slice(0, 3).join("; ")}`,
+          description: `Failed to send invitations. Check progress log for details.`,
           variant: "destructive",
         });
       }
-    } catch {
+    } catch (error) {
+      addLog(`Error: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
       toast({
         title: "Error",
-        description: "Failed to send invitations",
+        description: "Failed to send batch invitations",
         variant: "destructive",
       });
     } finally {
@@ -645,6 +845,124 @@ export function InviteMembers({ teamSlug }: InviteMembersProps) {
             </p>
           </div>
         </div>
+
+        {/* Progress Tracking Section */}
+        {showProgress && progress && (
+          <>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Progress</span>
+              </div>
+            </div>
+
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Invitation Progress</CardTitle>
+                  {progress.isComplete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearProgress}
+                      className="h-8 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Progress Summary */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-lg bg-background p-3">
+                    <p className="text-xs text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold">{progress.total}</p>
+                  </div>
+                  <div className="rounded-lg bg-green-500/10 p-3">
+                    <p className="text-xs text-green-600 dark:text-green-400">Successful</p>
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {progress.successful}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-yellow-500/10 p-3">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">Warnings</p>
+                    <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                      {progress.alreadyMembers + progress.alreadyInvited}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-red-500/10 p-3">
+                    <p className="text-xs text-red-600 dark:text-red-400">Failed</p>
+                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                      {progress.emailFailed}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                {!progress.isComplete && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Processing...</span>
+                      <span>
+                        {progress.processed} / {progress.total}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-background">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{
+                          width: `${progress.total > 0 ? (progress.processed / progress.total) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Detailed Logs */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Detailed Log</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {progress.logs.length} entries
+                    </span>
+                  </div>
+                  <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border bg-background p-3">
+                    {progress.logs.map((log, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-start gap-2 text-xs ${
+                          log.type === "success"
+                            ? "text-green-600 dark:text-green-400"
+                            : log.type === "error"
+                              ? "text-red-600 dark:text-red-400"
+                              : log.type === "warning"
+                                ? "text-yellow-600 dark:text-yellow-400"
+                                : "text-muted-foreground"
+                        }`}
+                      >
+                        <span className="shrink-0 font-mono">
+                          {log.timestamp.toLocaleTimeString()}
+                        </span>
+                        <span>{log.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {progress.isComplete && (
+                  <div className="rounded-lg border-2 border-primary/20 bg-primary/10 p-3">
+                    <p className="text-center text-sm font-medium text-primary">
+                      ✓ Invitation process completed
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </CardContent>
     </Card>
   );
